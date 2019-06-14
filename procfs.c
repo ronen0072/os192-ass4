@@ -11,7 +11,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
-//#include "buf.h"
+#include "buf.h"
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 int num_inodes = 0;
