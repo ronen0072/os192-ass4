@@ -16,6 +16,16 @@ struct {
   struct file file[NFILE];
 } ftable;
 
+
+uint num_free_fd;
+uint num_uesd_fd;
+uint num_Unique_inode_fds;
+uint num_writeable_fds;
+uint num_readable_fds;
+uint total_num_refs;
+uint refs_per_fds;
+
+
 void
 fileinit(void)
 {
@@ -154,4 +164,46 @@ filewrite(struct file *f, char *addr, int n)
   }
   panic("filewrite");
 }
+void updateCunters(){
+    struct file *f;
+    struct file *f2;
 
+    acquire(&ftable.lock);
+    for(f = ftable.file; f < ftable.file + NFILE; f++){
+        if(f->ref == 0)
+            num_free_fd++;
+        else
+            num_uesd_fd++;
+        if(f->readable) num_readable_fds++;
+        if(f->writable) num_writeable_fds++;
+        total_num_refs += f->ref;
+        for(f2 = f; f2 < ftable.file + NFILE; f2++)
+            if(f->ip == f2->ip)
+                break;
+        if(f2 >= ftable.file + NFILE)
+            num_Unique_inode_fds++;
+    }
+    refs_per_fds = total_num_refs/num_uesd_fd;
+
+    release(&ftable.lock);
+}
+
+uint get_num_free_fd(){
+    return num_free_fd;
+}
+
+uint get_num_Unique_inode_fds(){
+    return num_Unique_inode_fds;
+}
+
+uint get_num_readable_fds(){
+    return num_readable_fds;
+}
+
+uint get_num_writeable_fds(){
+    return num_writeable_fds;
+}
+
+uint get_refs_per_fds(){
+    return refs_per_fds;
+}

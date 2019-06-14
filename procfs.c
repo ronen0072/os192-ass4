@@ -35,7 +35,17 @@ void itoa(char *s, int n){
     }
 }
 
+void appendToBuf(char *buff, char * text){
+    int textlen = strlen(text);
+    int sz = strlen(buff);
+    memmove(buff + sz, text,textlen);
+}
 
+void appendNumToBuf(char *buff, int num){
+    char numContainer[10] = {0};
+    itoa(numContainer, num);
+    appendToBuf(buff, numContainer);
+}
 
 void appendDirentTobuf(char * buf, ushort inum, char * name, int direntNum){
     struct dirent drnt;
@@ -45,6 +55,20 @@ void appendDirentTobuf(char * buf, ushort inum, char * name, int direntNum){
 
 }
 
+int filestatInfo(char *ansBuf){
+    appendToBuf(ansBuf, "Free fds: ");
+    appendNumToBuf(ansBuf, get_num_free_fd());
+    appendToBuf(ansBuf,"\nUnique inode fds: ");
+    appendNumToBuf(ansBuf, get_num_Unique_inode_fds());
+    appendToBuf(ansBuf,"\nWriteable fds: ");
+    appendNumToBuf(ansBuf, get_num_writeable_fds());
+    appendToBuf(ansBuf,"\nReadable fds: ");
+    appendNumToBuf(ansBuf, get_num_readable_fds());
+    appendToBuf(ansBuf,"\nRefs per fds: ");
+    appendNumToBuf(ansBuf, get_refs_per_fds());
+    appendToBuf(ansBuf,"\n");
+    return strlen(ansBuf);
+}
 
 int getProcDirents(struct inode *ip, char *buf){
 
@@ -88,6 +112,8 @@ int getDirents(struct inode *ip, char *buf){
 
     if(ip->inum <= num_inodes)  // case /proc
        return  getProcDirents(ip, buf);
+    if(ip->inum == num_inodes + 2) // filestat
+        return  filestatInfo(buf);
     if(ip->inum == num_inodes + 3) // inodeinfo dir
        return  getInodeDirents(ip, buf);
 
