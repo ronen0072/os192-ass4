@@ -15,6 +15,7 @@ kernelmemfs
 mkfs
 .gdbinit
 .idea/**/*
+.idea/*
 *.idea
 *.o
 *.asm
