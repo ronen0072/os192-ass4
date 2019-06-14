@@ -682,11 +682,12 @@ nameiparent(char *path, char *name)
 void getInodesInUse(int * inodes){
 
     struct inode *ip;
-    int i=0, j=0;
+    volatile int i=0, j=0;
     acquire(&icache.lock);
 
     for(ip = &icache.inode[0]; ip < &icache.inode[NINODE] ; ip++){
-        if(ip->valid) {
+
+        if(ip->valid == 1) {
             inodes[i] = j;
             i++;
         }

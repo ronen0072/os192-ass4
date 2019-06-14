@@ -57,33 +57,28 @@ int getProcDirents(struct inode *ip, char *buf){
     appendDirentTobuf(buf,num_inodes+1,"ideinfo", 2);
     appendDirentTobuf(buf,num_inodes+2,"filestat",3 );
     appendDirentTobuf(buf,num_inodes+3,"inodeinfo", 4);
-
     int pids  [NPROC]={0};
     usedPids(pids);
 
     int i;
     for(i=0; i<NPROC && pids[i]!=-1 ;i++){
-//        for(int j = 0 ;j<14; j++)
-//            dirname[j]=0;
         memset(dirname,0,DIRSIZ);
-
         itoa(dirname,pids[i]);
-        appendDirentTobuf(buf,num_inodes+(i * 1000), dirname, i+5);
+        appendDirentTobuf(buf,num_inodes + 3000 + (i * 50), dirname, i+5);
     }
 
     return (i+5) * sizeof(struct dirent);
 }
 int getInodeDirents(struct inode *ip, char *buf){
+
     int inodes[num_inodes];
     getInodesInUse(inodes);
     char name[14];
     int i;
     for( i = 0; i<num_inodes  && inodes[i] != -1; i++ ){
-//        for(int j = 0 ;j<4; j++)
-//            name[j]=0;
         memset(name,0,DIRSIZ);
-        itoa(name ,inodes[0]);
-        appendDirentTobuf(buf,num_inodes + (i * 50) , name , i);
+        itoa(name ,inodes[i]);
+        appendDirentTobuf(buf,num_inodes + 10 + (i * 10 ) , name , i);
     }
     return i * sizeof(struct dirent);
 }
@@ -126,7 +121,8 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
         num_inodes = sb.ninodes;
 
     }
-    char dierntsBuff [1104] = {0}; // max size of dirents ( 64 procs+ 3 infos + 2 - aliases)
+    char dierntsBuff [1104]; // max size of dirents ( 64 procs+ 3 infos + 2 - aliases)
+    memset(dierntsBuff,0,1104);
     int num_dirents = getDirents(ip, dierntsBuff);
     int  bytesRead;
     if (off < num_dirents) {
