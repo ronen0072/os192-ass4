@@ -23,15 +23,15 @@ static void wakeup1(void *chan);
 void usedPids(int * pids){
     struct proc * p;
     acquire(&ptable.lock);
-    int i=0;
+    volatile int i=0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
         if (p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING) {
             pids[i] = p->pid;
+
             i++;
         }
 
     release(&ptable.lock);
-
     pids[i]=-1;
 }
 

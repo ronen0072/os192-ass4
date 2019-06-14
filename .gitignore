@@ -17,5 +17,5 @@ mkfs
 .idea/**/*
 .idea/*
 *.idea
-*.o
-*.asm
+*.S
+

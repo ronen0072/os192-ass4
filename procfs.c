@@ -34,42 +34,44 @@ void itoa(char *s, int n){
         s[len - 1 - i] = tmp;
     }
 }
-void strcpy(char * dst, char * orig){
-    int len = strlen(orig);
-    for (int i=0; i<len; i++){
 
-    }
-}
+
 
 void appendDirentTobuf(char * buf, ushort inum, char * name, int direntNum){
     struct dirent drnt;
    drnt.inum = inum;
-  //  memmove(&drnt.name, name,/* strlen(name)*/ 4);
-   memmove(buf+(direntNum* sizeof(struct dirent)),(void *)&drnt, sizeof(struct dirent));
+   memmove(&drnt.name, name, DIRSIZ);
+   memmove(buf+(direntNum* sizeof(drnt)),(void *)&drnt, sizeof(drnt));
 
 }
 
 
 int getProcDirents(struct inode *ip, char *buf){
 
-    appendDirentTobuf(buf, ip->inum,".", 0);     // self "."
-    appendDirentTobuf(buf, /*namei("")->inum*/1,"..", 1); // parent is root dir
+    char dirname[DIRSIZ];
+    memset(dirname,0,DIRSIZ);
+    dirname[0]='.'; //CWD
+    appendDirentTobuf(buf, ip->inum,dirname, 0);
+    dirname[1] = '.'; //PARENT DIR
+    appendDirentTobuf(buf, namei("")->inum,dirname, 1);
     appendDirentTobuf(buf,num_inodes+1,"ideinfo", 2);
     appendDirentTobuf(buf,num_inodes+2,"filestat",3 );
     appendDirentTobuf(buf,num_inodes+3,"inodeinfo", 4);
 
     int pids  [NPROC]={0};
     usedPids(pids);
-    char name[4];
+
     int i;
     for(i=0; i<NPROC && pids[i]!=-1 ;i++){
-        for(int j = 0 ;j<4; j++)
-            name[j]=0;
-        itoa(name,pids[i]);
-        appendDirentTobuf(buf,num_inodes+(i * 100), name, i+5);
+//        for(int j = 0 ;j<14; j++)
+//            dirname[j]=0;
+        memset(dirname,0,DIRSIZ);
+
+        itoa(dirname,pids[i]);
+        appendDirentTobuf(buf,num_inodes+(i * 1000), dirname, i+5);
     }
 
-    return (i+4) * sizeof(struct dirent);
+    return (i+5) * sizeof(struct dirent);
 }
 int getInodeDirents(struct inode *ip, char *buf){
     int inodes[num_inodes];
@@ -77,8 +79,9 @@ int getInodeDirents(struct inode *ip, char *buf){
     char name[14];
     int i;
     for( i = 0; i<num_inodes  && inodes[i] != -1; i++ ){
-        for(int j = 0 ;j<4; j++)
-            name[j]=0;
+//        for(int j = 0 ;j<4; j++)
+//            name[j]=0;
+        memset(name,0,DIRSIZ);
         itoa(name ,inodes[0]);
         appendDirentTobuf(buf,num_inodes + (i * 50) , name , i);
     }
@@ -113,7 +116,6 @@ procfsiread(struct inode* dp, struct inode *ip) {
 int
 procfsread(struct inode *ip, char *dst, int off, int n) {
 
-
     // double check
     if(ip->type != T_DEV)
        return 0;
@@ -126,9 +128,18 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
     }
     char dierntsBuff [1104] = {0}; // max size of dirents ( 64 procs+ 3 infos + 2 - aliases)
     int num_dirents = getDirents(ip, dierntsBuff);
-    num_dirents =  min(num_dirents,n);
-   memmove(dst, dierntsBuff + off , num_dirents);
-    return 1;
+    int  bytesRead;
+    if (off < num_dirents) {
+        bytesRead = num_dirents - off;
+        if (bytesRead < n) {
+            memmove(dst, dierntsBuff + off, bytesRead);
+            return bytesRead;
+        }
+        num_dirents = min(num_dirents, n);
+        memmove(dst, dierntsBuff + off, num_dirents);
+        return num_dirents;
+    }
+    return 0;
 }
 
 int
