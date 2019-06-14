@@ -248,19 +248,20 @@ iget(uint dev, uint inum)
 
   // Is the inode already cached?
   empty = 0;
-  for(ip = &icache.inode[0]; ip < &icache.inode[NINODE]; ip++){
+  for(ip = &icache.inode[0]; ip < &icache.inode[NINODE]; ip++){   // increase ref count id inode is in cache and return it
     if(ip->ref > 0 && ip->dev == dev && ip->inum == inum){
       ip->ref++;
       release(&icache.lock);
       return ip;
     }
-    if(empty == 0 && ip->ref == 0)    // Remember empty slot.
+    if(empty == 0 && ip->ref == 0)    // Remember empty slot. //there is an available block
       empty = ip;
   }
 
   // Recycle an inode cache entry.
-  if(empty == 0)
+  if(empty == 0)  // we didnt find the indoe in cache
     panic("iget: no inodes");
+// we construct the available inode to fit the needed inode with minimal data
 
   ip = empty;
   ip->dev = dev;
@@ -456,10 +457,10 @@ readi(struct inode *ip, char *dst, uint off, uint n)
   uint tot, m;
   struct buf *bp;
 
-  if(ip->type == T_DEV){
-    if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
+  if(ip->type == T_DEV){  // if it is dev type
+    if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)  // if fields are not properly defined it bad
       return -1;
-    return devsw[ip->major].read(ip, dst, off, n);
+    return devsw[ip->major].read(ip, dst, off, n); // prefsread the inode
   }
 
   if(off > ip->size || off + n < off)
@@ -533,21 +534,21 @@ dirlookup(struct inode *dp, char *name, uint *poff)
     panic("dirlookup not DIR");
 
   for(off = 0; off < dp->size || dp->type == T_DEV ; off += sizeof(de)){
-    if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de)) {
+    if(readi(dp, (char*)&de, off, sizeof(de)) != sizeof(de)) { // not a dirent / bad one
       if (dp->type == T_DEV)
         return 0;
       panic("dirlookup read");
     }
-    if(de.inum == 0)
+    if(de.inum == 0)   // its a free dirent - not the one we are looking for
       continue;
     if(namecmp(name, de.name) == 0){
       // entry matches path element
       if(poff)
         *poff = off;
       inum = de.inum;
-      ip = iget(dp->dev, inum);
+      ip = iget(dp->dev, inum);    // get the info
       if (ip->valid == 0 && dp->type == T_DEV && devsw[dp->major].iread) {
-        devsw[dp->major].iread(dp, ip);
+        devsw[dp->major].iread(dp, ip); // init ip fields
       }
       return ip;
     }
@@ -635,14 +636,14 @@ namex(char *path, int nameiparent, char *name)
 {
   struct inode *ip, *next;
 
-  if(*path == '/')
+  if(*path == '/')    //if it a full path  iget its inode
     ip = iget(ROOTDEV, ROOTINO);
   else
-    ip = idup(myproc()->cwd);
+    ip = idup(myproc()->cwd);   // else increase the ref count to current inode
 
-  while((path = skipelem(path, name)) != 0){
+  while((path = skipelem(path, name)) != 0){ // for each path element get next path element (validating  all path existence)
     ilock(ip);
-    if(ip->type != T_DIR && !IS_DEV_DIR(ip)){
+    if(ip->type != T_DIR && !IS_DEV_DIR(ip)){   // if it is a regular file or a wrong type
       iunlockput(ip);
       return 0;
     }
@@ -651,14 +652,14 @@ namex(char *path, int nameiparent, char *name)
       iunlock(ip);
       return ip;
     }
-    if((next = dirlookup(ip, name, 0)) == 0){
+    if((next = dirlookup(ip, name, 0)) == 0){ // if file not found in path (if it is, next is the next path element)
       iunlockput(ip);
       return 0;
     }
-    iunlockput(ip);
+    iunlockput(ip);      // next
     ip = next;
   }
-  if(nameiparent){
+  if(nameiparent){ //
     iput(ip);
     return 0;
   }
@@ -676,4 +677,21 @@ struct inode*
 nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
+}
+
+void getInodesInUse(int * inodes){
+
+    struct inode *ip;
+    int i=0, j=0;
+    acquire(&icache.lock);
+
+    for(ip = &icache.inode[0]; ip < &icache.inode[NINODE] ; ip++){
+        if(ip->valid) {
+            inodes[i] = j;
+            i++;
+        }
+        j++;
+    }
+    release(&icache.lock);
+    inodes[i] = -1;
 }

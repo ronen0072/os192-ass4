@@ -38,4 +38,6 @@ extern struct devsw devsw[];
 
 #define CONSOLE 1
 #define PROCFS  2
+#define VALID   1
+
 #define IS_DEV_DIR(ip) (ip->type == T_DEV && devsw[ip->major].isdir && devsw[ip->major].isdir(ip))
