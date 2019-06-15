@@ -65,6 +65,8 @@ struct inode * getInodeByIndx(int indx);
 void            ideinit(void);
 void            ideintr(void);
 void            iderw(struct buf*);
+struct buf**    getidequeue(void);
+struct spinlock*getidelock(void);
 
 // ioapic.c
 void            ioapicenable(int irq, int cpu);

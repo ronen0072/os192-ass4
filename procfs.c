@@ -104,6 +104,49 @@ int appendDirAliases(struct inode * ip , char * buf){
     appendDirentTobuf(buf, namei("")->inum,"..", 1);
     return 2 * DRNTSIZE;
 }
+
+int ideInfo(char *ansBuf){
+    uint size =0;
+    uint num_Write_waiting=0;
+    uint num_Read_waiting=0;
+    uint num_Waiting=0;
+    struct buf **pp;
+    struct buf *cur;
+
+    acquire(getidelock());
+    for(pp=getidequeue(); *pp; pp=&(*pp)->qnext){
+        cur = *pp;
+        if(cur->flags & B_DIRTY)
+            num_Write_waiting++;
+        if(cur->flags & B_VALID)
+            num_Read_waiting++;
+        if(cur->flags & (B_VALID|B_DIRTY))
+            num_Waiting++;
+    }
+
+    size+=appentStrToBuf(ansBuf, "Waiting operations: ", size);
+    size+=appendNumToBuf(ansBuf, num_Waiting, size);
+    size += brLine(ansBuf,size);
+    size+=appentStrToBuf(ansBuf,"Read waiting operations: ", size);
+    size+=appendNumToBuf(ansBuf, num_Read_waiting, size);
+    size += brLine(ansBuf,size);
+    size+=appentStrToBuf(ansBuf,"Write waiting operations: ", size);
+    size+=appendNumToBuf(ansBuf, num_Write_waiting, size);
+    size += brLine(ansBuf,size);
+    size+=appentStrToBuf(ansBuf,"Working blocks: ", size);
+    for(pp=getidequeue(); *pp; pp=&(*pp)->qnext){
+        cur = *pp;
+        size+=appentStrToBuf(ansBuf,"(", size);
+        size+=appendNumToBuf(ansBuf, cur->dev, size);
+        size+=appentStrToBuf(ansBuf,",", size);
+        size+=appendNumToBuf(ansBuf, cur->blockno, size);
+        size+=appentStrToBuf(ansBuf,");", size);
+    }
+    release(getidelock());
+    size += brLine(ansBuf,size);
+    return size;
+}
+
 int filestatInfo(char *ansBuf){
     uint size =0;
     updateCounters();
@@ -255,6 +298,8 @@ int getDirents(struct inode *ip, char *buf){
 
     if(ip->inum <= num_inodes)                              // proc
         return  getProcDirents(ip, buf);
+    if(ip->inum == num_inodes + 1)                          // ideinfo
+        return  ideInfo(buf);
     if(ip->inum == num_inodes + 2)                          // filestat
         return  filestatInfo(buf);
     if(ip->inum == num_inodes + 3)                          // inodeinfo dir

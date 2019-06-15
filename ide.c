@@ -34,6 +34,15 @@ static struct buf *idequeue;
 static int havedisk1;
 static void idestart(struct buf*);
 
+struct buf** getidequeue() {
+    return &idequeue;
+}
+
+struct spinlock* getidelock() {
+    return &idelock;
+}
+
+
 // Wait for IDE disk to become ready.
 static int
 idewait(int checkerr)
