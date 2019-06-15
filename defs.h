@@ -33,7 +33,7 @@ void            fileinit(void);
 int             fileread(struct file*, char*, int n);
 int             filestat(struct file*, struct stat*);
 int             filewrite(struct file*, char*, int n);
-void            updateCunters(void);
+void            updateCounters(void);
 uint            get_num_free_fd(void);
 uint            get_num_Unique_inode_fds(void);
 uint            get_num_readable_fds(void);

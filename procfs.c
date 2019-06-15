@@ -78,7 +78,7 @@ int appendNumToBuf(char *buf, int num, uint off){
     char numContainer[DIRSIZ];
     memset(numContainer, 0, DIRSIZ);
     itoa(numContainer, num);
-    return appentStrToBuf(buf+off, numContainer , strlen(numContainer));
+    return appentStrToBuf(buf, numContainer , off);
 }
 
 
@@ -147,6 +147,7 @@ int getProcDirents(struct inode *ip, char *buf){
 }
 int getInodeDirents(struct inode *ip, char *buf){
 
+    int size = appendDirAliases(ip,buf);
     int inodes[num_inodes];
     getInodesInUse(inodes);
     char name[14];
@@ -154,9 +155,9 @@ int getInodeDirents(struct inode *ip, char *buf){
     for( i = 0; i<num_inodes  && inodes[i] != -1; i++ ){
         memset(name,0,DIRSIZ);
         itoa(name ,inodes[i]);
-        appendDirentTobuf(buf,num_inodes + 10 + (i * 10 ) , name , i);
+        size+=appendDirentTobuf(buf,num_inodes + 10 + (i * 10 ) , name , i);
     }
-    return i * DRNTSIZE;
+    return size;
 }
 
 
@@ -186,87 +187,43 @@ int getInodeInfo(struct inode *ip, char *buf){
 
     struct inode * cp= getInodeByIndx(indx);
 
-    // init temp bufs;
-    char dev[sizeof(int)];
-    memset(dev, 0 , sizeof(int));
-    char inum[sizeof(int)];
-    memset(inum, 0 , sizeof(int));
-    char valid[sizeof(int)];
-    memset(valid, 0 , sizeof(int));
-    char major[sizeof(short)];
-    memset(major, 0 , sizeof(short));
-    char minor[sizeof(short)];
-    memset(minor, 0 , sizeof(short));
-    char nlink[sizeof(short)];
-    memset(nlink, 0 , sizeof(short));
-    char blkUsed[sizeof(int)];
-    memset(blkUsed, 0 , sizeof(int));
-
-
     nblksUse = countBlksInUse(cp);
-
-    // convert all parameters to string
-    itoa(dev, cp->dev);
-    itoa(inum, cp->inum);
-    itoa(valid, cp->valid);
-    itoa(major, cp->major);
-    itoa(minor, cp->minor);
-    itoa(nlink, cp->nlink);
-    itoa(blkUsed, nblksUse);
 
     // fill buf with info
     size += appentStrToBuf(buf, "Device:",size);
-    size += appentStrToBuf(buf, dev,size);
+    size += appendNumToBuf(buf, cp->dev,size);
     size += brLine(buf,size);
     size += appentStrToBuf(buf, "Inode number:",size);
-    size += appentStrToBuf(buf, valid,size);
+    size += appendNumToBuf(buf, cp->inum,size);
     size += brLine(buf,size);
     size += appentStrToBuf(buf, "Is valid:",size);
-    size += appentStrToBuf(buf, valid,size);
+    size += appendNumToBuf(buf, cp->valid,size);
     size += brLine(buf,size);
     size += appentStrToBuf(buf, "Type:",size);
     size += appentStrToBuf(buf, inodeType[cp->type],size);
     size += brLine(buf,size);
     size += appentStrToBuf(buf, "Major minor: (",size);
-    size += appentStrToBuf(buf, major,size);
+    size += appendNumToBuf(buf, cp->minor,size);
     size += appentStrToBuf(buf, ",",size);
-    size += appentStrToBuf(buf, minor,size);
+    size += appendNumToBuf(buf, cp->minor,size);
     size += appentStrToBuf(buf, ")",size);
     size += brLine(buf,size);
     size += appentStrToBuf(buf, "Hard links:",size);
-    size += appentStrToBuf(buf, nlink,size);
+    size += appendNumToBuf(buf, cp->nlink,size);
     size += brLine(buf,size);
     size += appentStrToBuf(buf, "blocks used:", size);
-    size += appentStrToBuf(buf, blkUsed, size);
+    size += appendNumToBuf(buf, nblksUse, size);
     size += brLine(buf,size);
 
     return size;
 }
-/***
- *
- // in-memory copy of an inode
-struct inode {
-  uint dev;           // Device number
-  uint inum;          // Inode number
-  int ref;            // Reference count
-  struct sleeplock lock; // protects everything below here
-  int valid;          // inode has been read from disk?
 
-  short type;         // copy of disk inode
-  short major;
-  short minor;
-  short nlink;
-  uint size;
-  uint addrs[NDIRECT+1];
-};
- */
 int procInfoDirents(struct inode *ip, char *buf){
 
     appendDirAliases(ip,buf);
     appendDirentTobuf(buf,ip->inum+1,"name", 2);
     appendDirentTobuf(buf,ip->inum+2,"status",3 );
     return 4 * DRNTSIZE;
-
 
 }
 
@@ -281,40 +238,37 @@ int procName(struct inode *ip, char *buf){
 }
 
 int procStatus(struct inode *ip, char *buf){
-    char sz[sizeof(uint)];
-    memset(sz,0, sizeof(uint));
+    int size =0;
     int pid = (ip->inum - num_inodes - 3000) / 50;
     struct proc * p = getProc(pid);
 
-    itoa(sz,p->sz);
-    int size =0;
     size += appentStrToBuf(buf, "Process State:", 0);
     size += appentStrToBuf(buf, procState[p->state], size);
     size += brLine(buf,size);
     size += appentStrToBuf(buf, "Memory usage:", size);
-    size += appentStrToBuf(buf, sz, size);
+    size += appendNumToBuf(buf, p->sz, size);
     size += brLine(buf,size);
     return size;
 }
 
 int getDirents(struct inode *ip, char *buf){
 
-    if(ip->inum <= num_inodes)  // case /proc
+    if(ip->inum <= num_inodes)                              // proc
         return  getProcDirents(ip, buf);
-    if(ip->inum == num_inodes + 2) // filestat
+    if(ip->inum == num_inodes + 2)                          // filestat
         return  filestatInfo(buf);
-    if(ip->inum == num_inodes + 3) // inodeinfo dir
+    if(ip->inum == num_inodes + 3)                          // inodeinfo dir
         return  getInodeDirents(ip, buf);
-    if(ip->minor == PIDINFO) {   // PID files and dirs
+    if(ip->minor == PIDINFO) {                              // PID files and dirs
         int slot50 = (ip->inum - num_inodes - 3000)%50;
-        if(slot50 == 0) //proc num i dor
+        if(slot50 == 0)                                     //proc num i dir
             return procInfoDirents(ip, buf);
-        if(slot50 == 1)
+        if(slot50 == 1)                                          // name link
             return procName(ip, buf);
-        if(slot50 == 2)
+        if(slot50 == 2)                                          // status
             return procStatus(ip , buf);
     }
-    if((ip->inum-num_inodes-10)%10 == 0 ) //inodeinfo file
+    if((ip->inum-num_inodes-10)%10 == 0 )                   //inodeinfo file
         return getInodeInfo(ip, buf);
 
 
@@ -334,6 +288,8 @@ procfsiread(struct inode* dp, struct inode *ip) {
     ip->valid = VALID;
     ip->major = PROCFS;
     ip->type = T_DEV;
+
+
     int slot50 = (ip->inum - num_inodes - 3000) % 50;
     if( slot50 == 0 || slot50 == 1 || slot50 == 2) //proc num i dir
         ip->minor = PIDINFO;
@@ -372,8 +328,8 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
 int
 procfswrite(struct inode *ip, char *buf, int n)
 {
-    //panic("Trying to write to readonly fs");
-    return -1;
+
+    return 0;
 }
 
 void

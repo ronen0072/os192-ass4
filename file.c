@@ -164,7 +164,7 @@ filewrite(struct file *f, char *addr, int n)
   }
   panic("filewrite");
 }
-void updateCunters(){
+void updateCounters(){
     struct file *f;
     struct file *f2;
 
