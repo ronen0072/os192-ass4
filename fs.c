@@ -679,6 +679,12 @@ nameiparent(char *path, char *name)
   return namex(path, 1, name);
 }
 
+struct inode * getInodeByIndx(int indx){
+   return &icache.inode[indx];
+
+
+}
+
 void getInodesInUse(int * inodes){
 
     struct inode *ip;

@@ -59,6 +59,7 @@ int             readi(struct inode*, char*, uint, uint);
 void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, char*, uint, uint);
 void            getInodesInUse(int *);
+struct inode * getInodeByIndx(int indx);
 
 // ide.c
 void            ideinit(void);
@@ -128,6 +129,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void           usedPids(int *);
+struct proc *        getProc(int pid);
 
 // procfs.c
 void            procfsinit(void);

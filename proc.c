@@ -35,6 +35,19 @@ void usedPids(int * pids){
     pids[i]=-1;
 }
 
+struct proc * getProc(int pid){
+    struct proc * p;
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+        if (p->pid == pid) {
+            release(&ptable.lock);
+            return p;
+        }
+
+    release(&ptable.lock);
+        return 0;
+}
+
 void
 pinit(void)
 {
