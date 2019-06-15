@@ -56,6 +56,7 @@ void appendDirentTobuf(char * buf, ushort inum, char * name, int direntNum){
 }
 
 int filestatInfo(char *ansBuf){
+    updateCunters();
     appendToBuf(ansBuf, "Free fds: ");
     appendNumToBuf(ansBuf, get_num_free_fd());
     appendToBuf(ansBuf,"\nUnique inode fds: ");
