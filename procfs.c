@@ -118,9 +118,9 @@ int ideInfo(char *ansBuf){
         cur = *pp;
         if(cur->flags & B_DIRTY)
             num_Write_waiting++;
-        if(cur->flags & B_VALID)
+        if(!(cur->flags & B_VALID))
             num_Read_waiting++;
-        if(cur->flags & (B_VALID|B_DIRTY))
+        //if(cur->flags & (B_VALID|B_DIRTY))
             num_Waiting++;
     }
 
@@ -333,6 +333,7 @@ procfsiread(struct inode* dp, struct inode *ip) {
     ip->valid = VALID;
     ip->major = PROCFS;
     ip->type = T_DEV;
+    ip->nlink = 1;
 
 
     int slot50 = (ip->inum - num_inodes - 3000) % 50;
@@ -373,8 +374,7 @@ procfsread(struct inode *ip, char *dst, int off, int n) {
 int
 procfswrite(struct inode *ip, char *buf, int n)
 {
-
-    return 0;
+    return -1;
 }
 
 void
